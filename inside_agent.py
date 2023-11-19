@@ -21,8 +21,8 @@ class InsideAgentForInitState(nn.Module):
         self.n_digits = n_digits 
         self.n_states_per_digit = n_states_per_digit
         self.vocab_size = vocab_size
-        self.fc1 = nn.Linear(n_states_per_digit, latent)
-        self.fc2 = nn.Linear(latent*n_digits, latent)
+        self.fc1 = nn.Linear(n_states_per_digit*n_digits, latent)
+        self.fc2 = nn.Linear(latent, latent)
         self.fc3 = nn.Linear(latent, vocab_size)
     
     def forward(self, state: torch.Tensor) -> torch.Tensor:
@@ -35,14 +35,8 @@ class InsideAgentForInitState(nn.Module):
             torch.Tensor: a `vocab_size`-dimensional 1D tensor 
             representing the predicted log-probability of each symbol.
         """
-        state = F.one_hot(state, num_classes=self.n_states_per_digit).float()  # Is `float()` needed here?
-        
-        hidden_lst = []
-        for i in range(self.n_digits):
-            # Parameters of `self.fc1` are shared among all the digits.
-            hidden_lst.append(F.relu(self.fc1(state[i])))
-        x = torch.cat(hidden_lst)
-        
+        state = F.one_hot(state, num_classes=self.n_states_per_digit).reshape(-1).float()  # Is `float()` needed here?
+        x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
