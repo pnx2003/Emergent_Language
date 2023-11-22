@@ -1,14 +1,12 @@
-from environment import Wire3Env
-from dqn_agent import ReplayBuffer, DQN
-
 import torch
-import numpy as np
 import random
 import argparse
+import numpy as np
+
 from tqdm import tqdm
 
-
-
+from environment import Wire3Env
+from dqn_agent import ReplayBuffer, DQN
 
 
 if __name__ == "__main__":
@@ -27,7 +25,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    device = "cpu"
 
     env = Wire3Env()
 
@@ -48,7 +45,6 @@ if __name__ == "__main__":
                 state_range=state_range, action_range=action_range, vocab_size=args.vocab_size,
                 lr=args.lr, gamma=args.gamma, epsilon=args.epsilon, target_update=args.target_update,
                 device=device)
-
 
     return_list = []
     for i in range(10):

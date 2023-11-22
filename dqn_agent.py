@@ -1,15 +1,13 @@
-import random
-import gym
-import numpy as np
-import collections
-from tqdm import tqdm
 import torch
-import torch.nn.functional as F
+import random
+import collections
+import numpy as np
 import torch.nn as nn
-import matplotlib.pyplot as plt
+import torch.nn.functional as F
+
+from environment import get_rule
 from inside_agent import InsideAgentForInitState, InsideAgentForAction
 from outside_agent import OutsideStateModel, OutsideComModel
-from environment import get_rule
 
 
 def state2str(state):
@@ -17,6 +15,7 @@ def state2str(state):
     for s in state:
         now_str += str(s.item())
     return now_str
+
 
 class ReplayBuffer:
     def __init__(self, capacity):
@@ -106,7 +105,7 @@ class DQN:
         else:
             state = torch.tensor([state], dtype=torch.float).to(self.device)
             action_dist = self.q_net(state)
-            action = torch.argmax(action_dist, dim=-1).numpy()
+            action = torch.argmax(action_dist, dim=-1).cpu().numpy()
         return action
 
     def update(self, data):
@@ -136,11 +135,3 @@ class DQN:
         if self.count % self.target_update == 0:
             self.target_q_net.load_state_dict(self.q_net.state_dict())
         self.count += 1
-
-
-
-
-
-
-
-

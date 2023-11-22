@@ -1,17 +1,18 @@
 import torch
-import numpy as np
-import os
-import pickle
 import torch.nn as nn
+
 from environment import get_rule
 
+
 rule = get_rule(3,3)
+
 
 def state2str(state):
     now_str = ""
     for s in state:
         now_str += str(s)
     return now_str
+
 
 class OutsideStateModel(nn.Module):
     def __init__(self, output_dim, hidden_dim, state_dim, vocab_size, embed_size=64):
@@ -25,7 +26,6 @@ class OutsideStateModel(nn.Module):
         self.fc2 = nn.Linear(in_features=hidden_dim, out_features=output_dim, bias=True)
         self.act = nn.Tanh()
         self.out_head = nn.Linear(in_features=1, out_features=state_dim, bias=True)
-
 
     def forward(self, input):
         # input (Batch_size, input_dim=1)
@@ -52,7 +52,6 @@ class OutsideComModel(nn.Module):
         self.fc2 = nn.Linear(in_features=hidden_dim, out_features=vocab_size, bias=True)
         self.act = nn.Tanh()
 
-
     def forward(self, input):
         # input (Batch_size, input_dim)
         input = input.float()
@@ -60,8 +59,6 @@ class OutsideComModel(nn.Module):
         output = self.act(self.fc2(hidden_state))
         output_dist = torch.softmax(output, dim=-1)
         return output_dist
-
-
 
 
 if __name__ == "__main__":

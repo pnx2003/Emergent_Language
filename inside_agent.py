@@ -56,25 +56,21 @@ class InsideAgentForAction(nn.Module):
         self.vocab_size = vocab_size
         self.fc1 = nn.Linear(vocab_size, latent)
         self.fc2 = nn.Linear(latent, latent)
-        self.fc3 = [nn.Linear(latent, int(latent/2)) for _ in range(n_digits)]
-        self.fc4 = [nn.Linear(int(latent/2), n_states_per_digit) for _ in range(n_digits)]
+        self.fc3 = nn.Linear(latent, n_states_per_digit * n_digits)
         
     def forward(self, x):
         """
         Args:
-            state (torch.Tensor): a `vocab_size`-dimensional one-hot tensor 
+            state (torch.Tensor): a one-hot tensor  of size (1, `vocab_size`)
             representing the symbol uttered by the outside agent.
 
         Returns:
-            torch.Tensor: a 2D tensor of size (`n_digits`, `n_states_per_digit`)
+            torch.Tensor: a 3D tensor of size (1, `n_digits`, `n_states_per_digit`)
             where each component represents the predicted log-probability of 
             each modified digit.
         """
+        
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        output_lst = torch.empty(size=(x.shape[0], self.n_digits, self.n_states_per_digit)) # .to("cuda:0")
-        for i in range(self.n_digits):
-            # Parameters of `self.fc3` and `self.fc4` are NOT shared among all the digits.
-            output_lst[:,i,:] = self.fc4[i](F.relu(self.fc3[i](x))).unsqueeze(0)
-        
-        return output_lst
+        x = F.relu(self.fc3(x).reshape(x.shape[0], self.n_digits, -1))
+        return x
