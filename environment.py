@@ -76,6 +76,7 @@ class Wire3Env(gymnasium.Env):
             reward = np.power(self.gamma, self.now_step)
 
         self.now_step += 1
+        done = True
 
         return self.now_state, reward, done
 
@@ -125,15 +126,18 @@ if __name__ == "__main__":
 
 
     env = Wire3Env()
-    env.reset()
-    print(f"goal_state = {env.goal_state}")
-    while True:
-        env.render()
-        action = env.action_space.sample()
-        s, r, d = env.step(action)
-        print(f"now state = {s}")
-        time.sleep(1)
-        if d:
-            env.close()
-            break
+    print(f"observation_space = {env.observation_space[0].n}")
+    print(f"action_space = {env.action_space}")
+
+    # env.reset()
+    # print(f"goal_state = {env.goal_state}")
+    # while True:
+    #     env.render()
+    #     action = env.action_space.sample()
+    #     s, r, d = env.step(action)
+    #     print(f"now state = {s}")
+    #     time.sleep(1)
+    #     if d:
+    #         env.close()
+    #         break
 

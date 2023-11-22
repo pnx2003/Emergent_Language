@@ -35,7 +35,8 @@ class InsideAgentForInitState(nn.Module):
             torch.Tensor: a `vocab_size`-dimensional 1D tensor 
             representing the predicted log-probability of each symbol.
         """
-        state = F.one_hot(state, num_classes=self.n_states_per_digit).reshape(-1).float()  # Is `float()` needed here?
+
+        state = F.one_hot(state, num_classes=self.n_states_per_digit).reshape(state.shape[0], -1).float()  # Is `float()` needed here?
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -55,8 +56,8 @@ class InsideAgentForAction(nn.Module):
         self.vocab_size = vocab_size
         self.fc1 = nn.Linear(vocab_size, latent)
         self.fc2 = nn.Linear(latent, latent)
-        self.fc3 = [nn.Linear(latent, latent/2) for _ in range(n_digits)]
-        self.fc4 = [nn.Linear(latent/2, n_states_per_digit) for _ in range(n_digits)]
+        self.fc3 = [nn.Linear(latent, int(latent/2)) for _ in range(n_digits)]
+        self.fc4 = [nn.Linear(int(latent/2), n_states_per_digit) for _ in range(n_digits)]
         
     def forward(self, x):
         """
@@ -71,11 +72,9 @@ class InsideAgentForAction(nn.Module):
         """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        
-        output_lst = []
+        output_lst = torch.empty(size=(x.shape[0], self.n_digits, self.n_states_per_digit)) # .to("cuda:0")
         for i in range(self.n_digits):
             # Parameters of `self.fc3` and `self.fc4` are NOT shared among all the digits.
-            output_lst.append(self.fc4[i](F.relu(self.fc3[i](x))).unsqueeze(0))
-        output = torch.cat(output_lst, dim=0)
+            output_lst[:,i,:] = self.fc4[i](F.relu(self.fc3[i](x))).unsqueeze(0)
         
-        return output
+        return output_lst
