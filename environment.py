@@ -30,7 +30,7 @@ def get_rule(space_dim, state_dim):
     rule = {}
     for i in range(len(all_state)):
         rule[state2str(all_state[i])] = all_goal_state[i]
-    with open("./env/wire3rule.pickle", "wb") as f:
+    with open("/root/code/Emergent_Language/env/wire3rule.pickle", "wb") as f:
         pickle.dump(rule, f)
     return rule
 
@@ -68,7 +68,7 @@ class Wire3Env(gymnasium.Env):
             action,
             type(action),
         )
-        self.now_state = action
+        self.now_state = (self.now_state + action)%3
         done = False
         reward = 0
         if np.all(self.now_state == self.goal_state):
@@ -76,7 +76,6 @@ class Wire3Env(gymnasium.Env):
             reward = np.power(self.gamma, self.now_step)
 
         self.now_step += 1
-        done = True
 
         return self.now_state, reward, done
 

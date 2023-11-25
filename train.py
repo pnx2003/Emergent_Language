@@ -54,21 +54,22 @@ if __name__ == "__main__":
                 state = env.remake()
                 done = False
                 while not done:
-                    action = agent.take_action(state)
+                    action = agent.take_action(state, env.goal_state)
                     if len(action.shape) == 2:
                         action = np.squeeze(action, axis=0)
                     next_state, reward, done = env.step(action)
-                    replay_buffer.add(state, action, reward, next_state, done)
+                    replay_buffer.add(state, action, reward, next_state, env.goal_state, done)
                     state = next_state
                     episode_return += reward
 
                     if replay_buffer.size() > args.minimal_size:
-                        b_s, b_a, b_r, b_ns, b_d = replay_buffer.sample(args.batch_size)
+                        b_s, b_a, b_r, b_ns, b_g, b_d = replay_buffer.sample(args.batch_size)
                         data = {
                             'state': b_s,
                             'action': b_a,
                             'next_state': b_ns,
                             'reward': b_r,
+                            'goal_state': b_g,
                             'done': b_d
                         }
                         agent.update(data)
