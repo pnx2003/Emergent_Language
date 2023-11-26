@@ -36,7 +36,7 @@ class InsideAgentForInitState(nn.Module):
             representing the predicted log-probability of each symbol.
         """
 
-        state = F.one_hot(state, num_classes=self.n_states_per_digit).reshape(state.shape[0], -1).float()  # Is `float()` needed here?
+        state = F.one_hot(state, num_classes=self.n_states_per_digit).reshape(state.shape[0], -1).float()  
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)

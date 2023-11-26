@@ -1,32 +1,19 @@
 import torch
 import random
-import argparse
 import numpy as np
 
 from tqdm import tqdm
 
+from config import parse_args
 from environment import Wire3Env
 from dqn_agent import ReplayBuffer, DQN
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--hidden-dim", type=int, default=128)
-    parser.add_argument("--vocab-size", type=int, default=64)
-    parser.add_argument("--capacity", type=int, default=5000)
-    parser.add_argument("--minimal-size", type=int, default=500)
-    parser.add_argument("--batch-size", type=int, default=128)
-    parser.add_argument("--gamma", type=float, default=0.95)
-    parser.add_argument("--epsilon", type=float, default=0.1)
-    parser.add_argument("--target-update", type=int, default=5)
-    parser.add_argument("--num-episode", type=int, default=10000)
-
-    args = parser.parse_args()
+    args = parse_args()
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-    env = Wire3Env()
+    env = Wire3Env(args)
 
     random.seed(0)
     np.random.seed(0)
@@ -54,31 +41,29 @@ if __name__ == "__main__":
                 state = env.remake()
                 done = False
                 while not done:
-                    action = agent.take_action(state)
+                    action = agent.take_action(state, env.goal_state)
                     if len(action.shape) == 2:
                         action = np.squeeze(action, axis=0)
                     next_state, reward, done = env.step(action)
-                    replay_buffer.add(state, action, reward, next_state, done)
+                    replay_buffer.add(state, action, reward, next_state, env.goal_state, done)
                     state = next_state
                     episode_return += reward
 
                     if replay_buffer.size() > args.minimal_size:
-                        b_s, b_a, b_r, b_ns, b_d = replay_buffer.sample(args.batch_size)
+                        b_s, b_a, b_r, b_ns, b_g, b_d = replay_buffer.sample(args.batch_size)
                         data = {
-                            'state': b_s,
-                            'action': b_a,
-                            'next_state': b_ns,
-                            'reward': b_r,
-                            'done': b_d
+                            'state':       b_s,
+                            'action':      b_a,
+                            'next_state':  b_ns,
+                            'reward':      b_r,
+                            'goal_state':  b_g,
+                            'done':        b_d,
                         }
                         agent.update(data)
                 return_list.append(episode_return)
                 if (i_episode + 1) % 10 == 0:
                     pbar.set_postfix({
-                        'episode':
-                            '%d' % (args.num_episode / 10 * i + i_episode + 1),
-                        'return':
-                        '%.3f' % np.mean(return_list[-10:])
+                        'episode':  '%d' % (args.num_episode / 10 * i + i_episode + 1),
+                        'return':   '%.3f' % np.mean(return_list[-10:]),
                     })
                 pbar.update(1)
-
