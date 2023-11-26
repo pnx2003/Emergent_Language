@@ -1,18 +1,6 @@
 import torch
 import torch.nn as nn
 
-from environment import get_rule
-
-
-rule = get_rule(3,3)
-
-
-def state2str(state):
-    now_str = ""
-    for s in state:
-        now_str += str(s)
-    return now_str
-
 
 class OutsideStateModel(nn.Module):
     def __init__(self, output_dim, hidden_dim, state_dim, vocab_size, embed_size=64):
