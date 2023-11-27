@@ -37,13 +37,20 @@ class Qnet(nn.Module):
         self.vocab_size = vocab_size
         self.device = device
 
+        # transfer the state to symbol sending to outside_agent
         self.inside_state_net = InsideAgentForInitState(n_digits=state_dim, n_states_per_digit=state_range,
                                                        vocab_size=vocab_size)
+
+        # transfer symbol from outside_agent to action
         self.inside_action_net = InsideAgentForAction(n_digits=action_dim, n_states_per_digit=action_range,
                                                      vocab_size=vocab_size)
+
+        # transfer the symbol from inside_agent to state
         self.outside_state_net = OutsideStateModel(output_dim=state_dim, state_dim=state_range, hidden_dim=hidden_dim,
                                                   vocab_size=vocab_size)
-        self.outside_com_net = OutsideComModel(input_dim=state_dim, hidden_dim=hidden_dim, vocab_size=vocab_size)
+
+        # transfer the action to the symbol sending to the inside_state
+        self.outside_com_net = OutsideComModel(input_dim=action_dim, hidden_dim=hidden_dim, vocab_size=vocab_size)
 
     def forward(self, state, goal_state):
         state = state.long()
@@ -51,10 +58,25 @@ class Qnet(nn.Module):
         inside_symbol_idx = torch.argmax(inside_symbol_dist, dim=-1, keepdim=True)
         if len(inside_symbol_idx.shape) == 1:
             inside_symbol_idx = torch.unsqueeze(inside_symbol_idx, dim=0)
-        
-        outside_symbol_dist = self.outside_com_net(goal_state)
+
+
+        state = state.long()
+        inside_symbol_dist = torch.softmax(self.inside_state_net(state), dim=-1)
+        inside_symbol_idx = torch.tensor(torch.argmax(inside_symbol_dist, dim=-1, keepdim=True), dtype=torch.long)
+        if len(inside_symbol_idx.shape) == 1:
+            inside_symbol_idx = torch.unsqueeze(inside_symbol_idx, dim=0)
+        outside_state_dist = self.outside_state_net(inside_symbol_idx)
+
+        # 外面的agent解码的里面的状态
+        outside_state_idx = torch.argmax(outside_state_dist, dim=-1) # (Batch_size, state_dim)
+        # rule = get_rule(space_dim=self.state_dim, state_dim=self.state_range)
+        outside_action = (goal_state.cpu() - outside_state_idx + self.state_range) % self.state_range
+        outside_action = outside_action.to(self.device)
+        outside_symbol_dist = self.outside_com_net(outside_action)
         outside_symbol_idx = torch.argmax(outside_symbol_dist, dim=-1)
         outside_symbol_onehot = F.one_hot(outside_symbol_idx, num_classes=self.vocab_size).float().to(self.device)
+
+        # inside_action_net 用来解码outside_agent传的symbol
         inside_action_dist = self.inside_action_net(outside_symbol_onehot)
 
         return inside_action_dist

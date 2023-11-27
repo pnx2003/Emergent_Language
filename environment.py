@@ -3,6 +3,7 @@ import random
 import pickle
 import gymnasium
 import numpy as np
+from scipy import spatial
 
 from gymnasium import spaces
 from gymnasium.utils import seeding
@@ -78,7 +79,7 @@ class Wire3Env(gymnasium.Env):
         reward = 0
         if np.all(self.now_state == self.goal_state):
             done = True
-            reward = np.power(self.args.gamma, self.now_step)
+            reward =  np.power(self.args.gamma, self.now_step)
 
         self.now_step += 1
 

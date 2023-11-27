@@ -66,4 +66,7 @@ if __name__ == "__main__":
                         'episode':  '%d' % (args.num_episode / 10 * i + i_episode + 1),
                         'return':   '%.3f' % np.mean(return_list[-10:]),
                     })
+                    with open('output1.txt', 'a') as f:
+                        f.write(f'{args.num_episode / 10 * i + i_episode + 1}: {np.mean(return_list[-10:])}')
+                        f.write('\n')
                 pbar.update(1)
