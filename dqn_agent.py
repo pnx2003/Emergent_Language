@@ -11,17 +11,20 @@ from outside_agent import OutsideStateModel, OutsideComModel
 
 class ReplayBuffer:
     def __init__(self, capacity):
-        self.buffer = collections.deque(maxlen=capacity)  # 队列,先进先出
+        self.buffer = collections.deque(maxlen=capacity)  # a FIFO queue
 
-    def add(self, state, action, reward, next_state, goal_state, done):  # 将数据加入buffer
+    def add(self, state, action, reward, next_state, goal_state, done):  
+        # insert a data tuple into the buffer
         self.buffer.append((state, action, reward, next_state, goal_state, done))
 
-    def sample(self, batch_size):  # 从buffer中采样数据,数量为batch_size
+    def sample(self, batch_size):  
+        # sample `batch_size` number of data tuples from the buffer
         transitions = random.sample(self.buffer, batch_size)
         state, action, reward, next_state, goal_state, done = [np.array(lst) for lst in zip(*transitions)]
         return state, action, reward, next_state, goal_state, done
 
-    def size(self):  # 目前buffer中数据的数量
+    def size(self):  
+        # return the current size of the buffer
         return len(self.buffer)
 
 
@@ -54,29 +57,24 @@ class Qnet(nn.Module):
 
     def forward(self, state, goal_state):
         state = state.long()
+        
+        # 1. Inside agent encodes the current state into a symbol.
         inside_symbol_dist = torch.softmax(self.inside_state_net(state), dim=-1)
         inside_symbol_idx = torch.argmax(inside_symbol_dist, dim=-1, keepdim=True)
         if len(inside_symbol_idx.shape) == 1:
             inside_symbol_idx = torch.unsqueeze(inside_symbol_idx, dim=0)
-
-
-        state = state.long()
-        inside_symbol_dist = torch.softmax(self.inside_state_net(state), dim=-1)
-        inside_symbol_idx = torch.tensor(torch.argmax(inside_symbol_dist, dim=-1, keepdim=True), dtype=torch.long)
-        if len(inside_symbol_idx.shape) == 1:
-            inside_symbol_idx = torch.unsqueeze(inside_symbol_idx, dim=0)
+            
+        # 2. Outside agent decodes the symbol uttered by inside agent into the state.
         outside_state_dist = self.outside_state_net(inside_symbol_idx)
-
-        # 外面的agent解码的里面的状态
-        outside_state_idx = torch.argmax(outside_state_dist, dim=-1) # (Batch_size, state_dim)
-        # rule = get_rule(space_dim=self.state_dim, state_dim=self.state_range)
-        outside_action = (goal_state.cpu() - outside_state_idx + self.state_range) % self.state_range
-        outside_action = outside_action.to(self.device)
+        outside_state_idx = torch.argmax(outside_state_dist, dim=-1).float().to(self.device)
+        
+        # 3. Outside agent calculates the desired action and encodes it into a symbol.
+        outside_action = (goal_state - outside_state_idx + self.state_range) % self.state_range
         outside_symbol_dist = self.outside_com_net(outside_action)
         outside_symbol_idx = torch.argmax(outside_symbol_dist, dim=-1)
         outside_symbol_onehot = F.one_hot(outside_symbol_idx, num_classes=self.vocab_size).float().to(self.device)
 
-        # inside_action_net 用来解码outside_agent传的symbol
+        # 4. Inside agent decodes the symbol uttered by inside agent into the action.
         inside_action_dist = self.inside_action_net(outside_symbol_onehot)
 
         return inside_action_dist
@@ -102,6 +100,7 @@ class DQN:
         self.count = 0
 
     def take_action(self, state, goal_state):
+        # use epsilon-greedy method to decide the agent's action
         if np.random.random() < self.epsilon:
             action = [np.random.randint(self.action_range) for _ in range(self.action_dim)]
             action = np.array(action)
@@ -125,7 +124,7 @@ class DQN:
         next_q_values = self.target_q_net(next_states, goal_states) # (Batch_size, action_dim, action_range)
         max_next_q_values = torch.max(next_q_values, dim=-1) # (Batch_size, aciton_dim)
         rewards = rewards.unsqueeze(1).repeat(1, self.state_dim) 
-        q_targets = rewards + self.gamma * max_next_q_values[0] # * (1-dones)
+        q_targets = rewards + self.gamma * max_next_q_values[0] 
         dqn_loss = torch.mean(F.mse_loss(q_values.view(-1), q_targets.view(-1)))
         self.optimizer.zero_grad()
         dqn_loss.backward()

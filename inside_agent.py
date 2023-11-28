@@ -72,5 +72,5 @@ class InsideAgentForAction(nn.Module):
         
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x).reshape(x.shape[0], self.n_digits, -1))
+        x = self.fc3(x).reshape(x.shape[0], self.n_digits, -1)
         return x
