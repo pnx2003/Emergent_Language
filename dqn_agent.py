@@ -85,7 +85,8 @@ class Qnet(nn.Module):
                                                   vocab_size=vocab_size)
 
         # transfer the action to the symbol sending to the inside_state
-        self.outside_com_net = OutsideComModel(input_dim=action_dim, input_range=action_range, hidden_dim=hidden_dim, vocab_size=vocab_size)
+        self.outside_com_net = OutsideComModel(input_dim=state_dim, input_range=state_range, hidden_dim=hidden_dim, vocab_size=vocab_size)
+        
 
     def forward(self, state, goal_state):
         state = state.long()
@@ -125,6 +126,7 @@ class Qnet(nn.Module):
         # print(f"inside_action_dist = {inside_action_dist}")
         # print(f"inside_action_dist = {inside_action_dist}")
         # print(f"inside_action_dist.shape = {inside_action_dist.shape}")
+        
         return inside_action_dist
 
 
@@ -171,11 +173,11 @@ class DQN:
 
         # self.q_net.train()
         q_values = self.q_net(states, goal_states) # (Batch_size, action_dim, action_range)
-        q_values = q_values.gather(2, actions.unsqueeze(2))
+        q_values = q_values.gather(2, actions.unsqueeze(2)) #(Batch_size, action_dim, 1)
         next_q_values = self.target_q_net(next_states, goal_states) # (Batch_size, action_dim, action_range)
         max_next_q_values = torch.max(next_q_values, dim=-1) # (Batch_size, aciton_dim)
-        rewards = rewards.unsqueeze(1).repeat(1, self.state_dim)
-        dones = dones.unsqueeze(1).repeat(1, self.state_dim)
+        rewards = rewards.unsqueeze(1).repeat(1, self.action_dim) 
+        dones = dones.unsqueeze(1).repeat(1, self.action_dim)
         q_targets = rewards + self.gamma * max_next_q_values[0] * (1-dones)
         # print(f"q_targets = {q_targets}")
         dqn_loss = torch.mean(F.mse_loss(q_values.view(-1), q_targets.view(-1)))

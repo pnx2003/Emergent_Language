@@ -49,7 +49,6 @@ if __name__ == "__main__":
                 cnt += 1
                 x.append(cnt)
                 while not done:
-                    
                     action = agent.take_action(state, env.goal_state)
                     if len(action.shape) == 2:
                         action = np.squeeze(action, axis=0)
