@@ -47,18 +47,21 @@ class GridWorld(gymnasium.Env):
         self.wall_space = spaces.Box(low=0, high=1, shape=(world_size,world_size,4), dtype=np.int32)
         self.world_size = world_size
         self.wall_prob = wall_prob
-        self.init_pos = np.array([random.randint(0, world_size), random.randint(0,world_size)])
+        self.init_pos = np.array([random.randint(0, world_size-1), random.randint(0, world_size-1)])
         self.now_pos = self.init_pos
-        self.goal_pos = np.array([random.randint(0, world_size), random.randint(0, world_size)])
+        self.goal_pos = np.array([random.randint(0, world_size-1), random.randint(0, world_size-1)])
         while (self.init_pos[0] == self.goal_pos[0]) and (self.init_pos[1] == self.goal_pos[1]):
-            self.goal_pos = [random.randint(0, world_size), random.randint(0, world_size)]
+            self.goal_pos = [random.randint(0, world_size-1), random.randint(0, world_size-1)]
 
         self.dir = np.array([[0, 1], [0, -1], [-1, 0], [1, 0]], dtype=np.int32)
         self.wall = self.wall_generation()
         while self.valid_check() == False:
+            
             self.wall = self.wall_generation()
         self.now_step = 0
         self.max_step = 100
+        self.goal_state = np.concatenate([np.zeros((4,4)).flatten() ,self.wall.flatten()])
+        self.goal_state[self.goal_pos[0] * self.world_size + self.goal_pos[1]] = 1
 
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (
@@ -71,6 +74,7 @@ class GridWorld(gymnasium.Env):
         self.now_step += 1
         if self.now_step >= self.max_step:
             return self.now_pos, reward, True
+        
         # assert (new_pos >= 0) and (new_pos < self.world_size), "action go out of the gridworld!"
         if (new_pos[0] >= 0) and (new_pos[0] < self.world_size) and (new_pos[1] >= 0) and (new_pos[1] < self.world_size) and (self.wall[self.now_pos[0]][self.now_pos[1]][action] == 0):
             if (new_pos[0] == self.goal_pos[0]) and (new_pos[1] == self.goal_pos[1]):
@@ -82,27 +86,30 @@ class GridWorld(gymnasium.Env):
             reward -= 5
             return self.now_pos, reward, done
 
-    def reset(self):
-        self.init_pos = np.array([random.randint(0, self.world_size), random.randint(0, self.world_size)])
-        self.now_pos = self.init_pos
-        self.goal_pos = np.array([random.randint(0, self.world_size), random.randint(0, self.world_size)])
-        while (self.init_pos[0] == self.goal_pos[0]) and (self.init_pos[1] == self.goal_pos[1]):
-            self.goal_pos = [random.randint(0, self.world_size), random.randint(0, self.world_size)]
-        self.now_step = 0
-        return self.now_pos
+    # def reset(self):
+    #     self.init_pos = np.array([random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)])
+    #     self.now_pos = self.init_pos
+    #     self.goal_pos = np.array([random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)])
+    #     while (self.init_pos[0] == self.goal_pos[0]) and (self.init_pos[1] == self.goal_pos[1]):
+    #         self.goal_pos = [random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)]
+    #     self.now_step = 0
+    #     return self.now_pos
 
-    def remake(self):
-        self.init_pos = np.array([random.randint(0, self.world_size), random.randint(0, self.world_size)])
+    def reset(self):
+        self.init_pos = np.array([random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)])
         self.now_pos = self.init_pos
-        self.goal_pos = np.array([random.randint(0, self.world_size), random.randint(0, self.world_size)])
+        self.goal_pos = np.array([random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)])
         while (self.init_pos[0] == self.goal_pos[0]) and (self.init_pos[1] == self.goal_pos[1]):
-            self.goal_pos = [random.randint(0, self.world_size), random.randint(0, self.world_size)]
+            self.goal_pos = [random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)]
         self.wall = self.wall_generation()
         while self.valid_check() == False:
             self.wall = self.wall_generation()
         self.now_step = 0
-        return self.now_pos
-
+        self.goal_state = np.concatenate([np.zeros((4,4)).flatten() ,self.wall.flatten()])
+        self.goal_state[self.goal_pos[0] * self.world_size + self.goal_pos[1]] = 1
+        self.now_state = np.concatenate([np.zeros((4,4)).flatten() ,self.wall.flatten()])
+        self.now_state[self.now_pos[0] * self.world_size + self.now_pos[1]] = 1
+        return self.now_state
 
     def wall_generation(self):
         wall_sample = np.zeros(shape=(self.world_size, self.world_size, 4), dtype=np.int32)

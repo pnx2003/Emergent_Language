@@ -16,5 +16,7 @@ def parse_args():
     parser.add_argument("--state_dim", type=int, default=3)
     parser.add_argument("--state_range", type=int, default=3)
     parser.add_argument("--rule_path", type=str, default="./env")
+    parser.add_argument("--env_type", type=str, default="Grid")
+    parser.add_argument("--world_size", type=int, default=4)
 
     return parser.parse_args()
