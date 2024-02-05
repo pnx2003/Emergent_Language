@@ -40,24 +40,31 @@ class GridWorld(gymnasium.Env):
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second': 2
     }
-    def __init__(self, world_size = 4, wall_prob=0.1):
+    def __init__(self, world_size = 7):
         # 0 up 1 down 2 left 3 right
         self.action_space = spaces.Discrete(4)
-        self.observation_space = spaces.Box(low=0, high=world_size-1, shape=(2,), dtype=np.int32)
-        self.wall_space = spaces.Box(low=0, high=1, shape=(world_size,world_size,4), dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(world_size, world_size), dtype=np.int32)
+        self.wall = np.array([[1, 0, 1, 0, 0, 1, 0], 
+                              [0, 1, 0, 0, 0, 0, 0], 
+                              [0, 1, 0, 1, 1, 0, 1],
+                              [0, 0, 0, 0, 0, 1, 0],
+                              [1, 0, 0, 1, 0, 1, 0],
+                              [1, 1, 0, 1, 0, 0, 0],
+                              [0, 0, 1, 0, 0, 0, 1]])
         self.world_size = world_size
-        self.wall_prob = wall_prob
-        self.init_pos = np.array([random.randint(0, world_size-1), random.randint(0, world_size-1)])
-        self.now_pos = self.init_pos
-        self.goal_pos = np.array([random.randint(0, world_size-1), random.randint(0, world_size-1)])
-        while (self.init_pos[0] == self.goal_pos[0]) and (self.init_pos[1] == self.goal_pos[1]):
-            self.goal_pos = [random.randint(0, world_size-1), random.randint(0, world_size-1)]
+        # use self.wall initialize the self.observation_space
+        for i in range(world_size):
+            for j in range(world_size):
+                self.observation_space[i][j] = self.wall[i][j]
+        
 
         self.dir = np.array([[0, 1], [0, -1], [-1, 0], [1, 0]], dtype=np.int32)
-        self.wall = self.wall_generation()
-        while self.valid_check() == False:
-            
-            self.wall = self.wall_generation()
+        
+        self.init_pos, self.goal_pos = self.state_generation()
+        
+        while self.valid_check() == False:    
+            self.init_pos, self.goal_pos = self.state_generation()
+        
         self.now_step = 0
         self.max_step = 100
         self.goal_state = np.concatenate([np.zeros((4,4)).flatten() ,self.wall.flatten()])
@@ -111,14 +118,16 @@ class GridWorld(gymnasium.Env):
         self.now_state[self.now_pos[0] * self.world_size + self.now_pos[1]] = 1
         return self.now_state
 
-    def wall_generation(self):
-        wall_sample = np.zeros(shape=(self.world_size, self.world_size, 4), dtype=np.int32)
-        for i in range(self.world_size):
-            for j in range(self.world_size):
-                for k in range(4):
-                    if np.random.uniform() < self.wall_prob:
-                        wall_sample[i][j][k] = 1
-        return wall_sample
+    def state_generation(self):
+        self.init_pos = np.array([random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)])
+        while self.wall[self.init_pos[0]][self.init_pos[1]] == 1:
+            self.init_pos = np.array([random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)])
+        
+        self.goal_pos = np.array([random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)])
+        while ((self.init_pos[0] == self.goal_pos[0]) and (self.init_pos[1] == self.goal_pos[1])) \
+            or self.wall[self.goal_pos[0]][self.goal_pos[1]] == 1:
+            self.goal_pos = [random.randint(0, self.world_size-1), random.randint(0, self.world_size-1)]
+        return self.init_pos, self.goal_pos
 
     def valid_check(self):
         # print(f"init_pos = {self.init_pos}")
